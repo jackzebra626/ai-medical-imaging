@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>智慧影像问诊平台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --main-color: #2c3e50;
+            --accent-color: #3498db;
+            --light-bg: #f7f9fc;
+            --border-radius: 8px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: var(--light-bg);
+            color: var(--main-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 28px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        header p {
+            font-size: 16px;
+            color: #7f8c8d;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+        }
+        .upload-section {
+            border: 2px dashed #ddd;
+            border-radius: var(--border-radius);
+            padding: 30px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: border-color 0.3s;
+            cursor: pointer;
+        }
+        .upload-section:hover {
+            border-color: var(--accent-color);
+        }
+        .upload-section.dragover {
+            border-color: var(--accent-color);
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        .upload-section img {
+            max-width: 100%;
+            max-height: 300px;
+            margin-bottom: 15px;
+            border-radius: var(--border-radius);
+            display: none;
+        }
+        .upload-section p {
+            font-size: 16px;
+            color: #7f8c8d;
+        }
+        .upload-section input[type="file"] {
+            display: none;
+        }
+        .upload-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        .upload-btn:hover {
+            background-color: #2980b9;
+        }
+        .diagnosis-section {
+            display: none;
+        }
+        .diagnosis-section h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        .diagnosis-result {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            line-height: 1.6;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .disclaimer {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #95a5a6;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>智慧影像问诊平台</h1>
+        <p>上传医疗影像，获取AI辅助诊断参考</p>
+    </header>
+
+    <div class="container">
+        <div class="upload-section" id="uploadArea">
+            <img id="previewImage" alt="预览图">
+            <p>拖拽图片到此处或点击上传</p>
+            <input type="file" id="imageUpload" accept="image/*">
+            <button class="upload-btn" id="uploadBtn">选择文件</button>
+        </div>
+
+        <div class="diagnosis-section" id="diagnosisSection">
+            <h2>诊断建议</h2>
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <p>AI分析中，请稍候...</p>
+            </div>
+            <div class="diagnosis-result" id="diagnosisResult">
+                <!-- 诊断结果将在这里显示 -->
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            <p>注意：本平台提供的诊断建议仅供参考，不能替代医生的专业诊断。如有疑问，请及时咨询专业医生。</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const imageUpload = document.getElementById('imageUpload');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const previewImage = document.getElementById('previewImage');
+            const diagnosisSection = document.getElementById('diagnosisSection');
+            const loading = document.getElementById('loading');
+            const diagnosisResult = document.getElementById('diagnosisResult');
+
+            // 点击上传按钮触发文件选择
+            uploadBtn.addEventListener('click', function() {
+                imageUpload.click();
+            });
+
+            // 处理文件选择
+            imageUpload.addEventListener('change', handleImageUpload);
+
+            // 拖拽上传
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    imageUpload.files = e.dataTransfer.files;
+                    handleImageUpload({ target: imageUpload });
+                }
+            });
+
+            // 处理上传的图片
+            function handleImageUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (!file.type.match('image.*')) {
+                    alert('请上传图片文件');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                    uploadArea.querySelector('p').style.display = 'none';
+                    uploadBtn.textContent = '重新上传';
+                    
+                    // 显示诊断区域并开始分析
+                    diagnosisSection.style.display = 'block';
+                    loading.style.display = 'block';
+                    diagnosisResult.textContent = '';
+                    
+                    // 模拟AI分析过程
+                    setTimeout(function() {
+                        loading.style.display = 'none';
+                        diagnosisResult.innerHTML = generateDiagnosis(file);
+                    }, 2000);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // 生成模拟诊断结果
+            function generateDiagnosis(file) {
+                // 这里只是模拟AI诊断，实际应用中需要调用后端API
+                const now = new Date();
+                const dateStr = now.toLocaleDateString();
+                const timeStr = now.toLocaleTimeString();
+                
+                // 随机生成一些诊断建议
+                const possibleFindings = [
+                    "肺部纹理清晰，未见明显异常结节或实质性病变。",
+                    "可见散在微小结节影，建议6个月后复查以排除病变进展。",
+                    "右侧肺下叶见一磨玻璃结节，边界清晰，直径约5mm，考虑良性病变可能性大，建议定期随访。",
+                    "心影大小形态正常，纵隔无移位，双侧胸廓对称。",
+                    "双侧肋骨未见明显骨折征象，软组织未见异常。"
+                ];
+                
+                const randomFinding = possibleFindings[Math.floor(Math.random() * possibleFindings.length)];
+                
+                return `
+                    <p><strong>上传时间：</strong>${dateStr} ${timeStr}</p>
+                    <p><strong>影像类型：</strong>${file.type.startsWith('image/') ? '医学影像' : '未知'}</p>
+                    <p><strong>AI观察：</strong>${randomFinding}</p>
+                    <p><strong>建议：</strong>本结果由AI算法生成，仅供参考。建议结合临床检查并由专业医生确认诊断。</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
